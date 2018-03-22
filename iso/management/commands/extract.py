@@ -1,18 +1,33 @@
+import os
 import urllib
-import csv
+# import csv
 from xml.etree import ElementTree
 from zipfile import ZipFile
-
+from datetime import timedelta, datetime
 
 from django.core.management.base import BaseCommand
+from django.core.exceptions import ObjectDoesNotExist
+# from django.utils.timezone import make_aware
+
+from iso.models import Price
 
 
 class Command(BaseCommand):
     def handle(self, *args, **options):
-        start = '20170101T00:00-0000'
-        end = '20170102T23:59-0000'
-        market_run_id = 'RTM'
+        try:
+            latest = Price.objects.earliest('start')
+            # end_time = make_aware(latest.end)
+            end_time = latest.start
+        except ObjectDoesNotExist as e:
+            print e.message
+            # end_time = make_aware(datetime(2018, 3, 21))
+            end_time = datetime(2018, 3, 21)
+        start_time = end_time - timedelta(days=30)
+        end = end_time.strftime('%Y%m%dT%H:%M') + '-0000'
+        start = start_time.strftime('%Y%m%dT%H:%M') + '-0000'
+        print start, end
 
+        market_run_id = 'RTM'
         active_day = start
 
         base_url = "http://oasis.caiso.com/oasisapi/SingleZip?"
@@ -22,10 +37,10 @@ class Command(BaseCommand):
             + '&startdatetime=' + active_day \
             + '&enddatetime=' + end \
             + '&market_run_id=' + market_run_id \
-            + '&grp_type=ALL_APNODES' \
+            + '&node=MENLO_6_N004' \
             + '&version=1'
 
-        file_name = '%s.zip' % start
+        file_name = '../%s.zip' % start
         urllib.urlretrieve(url, file_name)
         rows = []
         with ZipFile(file_name, 'r') as z:
@@ -52,8 +67,27 @@ class Command(BaseCommand):
                 except Exception as e:
                     print(e)
         if len(rows) > 0:
-            keys = rows[0].keys()
-            with open('%s.csv' % start, 'wd') as f:
-                dict_writer = csv.DictWriter(f, keys)
-                dict_writer.writeheader()
-                dict_writer.writerows(rows)
+            rows = list(filter(lambda d: d['DATA_DATA_ITEM'] == 'LMP_PRC', rows))
+            keep = ['DATA_INTERVAL_START_GMT', 'DATA_INTERVAL_END_GMT', 'DATA_RESOURCE_NAME', 'DATA_VALUE']
+            rows = [{k: v for k, v in r.iteritems() if k in keep} for r in rows]
+            prices = []
+            for row in rows:
+                price = Price(
+                    start=row['DATA_INTERVAL_START_GMT'],
+                    end=row['DATA_INTERVAL_END_GMT'],
+                    node=row['DATA_RESOURCE_NAME'],
+                    price=row['DATA_VALUE']
+                )
+                # price = {
+                #     'start': row['DATA_INTERVAL_START_GMT'],
+                #     'end': row['DATA_INTERVAL_END_GMT'],
+                #     'node': row['DATA_RESOURCE_NAME'],
+                #     'price': row['DATA_VALUE']
+                # }
+                prices.append(price)
+            # with open('../%s.csv' % start, 'wd') as f:
+            #     dict_writer = csv.DictWriter(f, prices[0].keys())
+            #     dict_writer.writeheader()
+            #     dict_writer.writerows(prices)
+            Price.objects.bulk_create(prices)
+        os.remove(file_name)
