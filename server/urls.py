@@ -16,6 +16,12 @@ Including another URLconf
 from django.conf.urls import url
 from django.contrib import admin
 
+
+from hubs.views import charging_pattern
+
+
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
+    # url(r'^api-auth/', include('rest_framework.urls')),
+    url(r'^pattern/', charging_pattern),
 ]

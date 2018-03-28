@@ -39,12 +39,16 @@ DJANGO_APPS = [
     'django.contrib.staticfiles',
 ]
 
+LIBRARY_APPS = [
+    'rest_framework'
+]
+
 PROJECT_APPS = [
     'hubs',
     'iso',
 ]
 
-INSTALLED_APPS = DJANGO_APPS + PROJECT_APPS
+INSTALLED_APPS = DJANGO_APPS + LIBRARY_APPS + PROJECT_APPS
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
