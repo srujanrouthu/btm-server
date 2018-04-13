@@ -14,8 +14,10 @@ from iso.models import Price
 
 class Command(BaseCommand):
     def handle(self, *args, **options):
+        nodes = ['MENLO_6_N004', 'GLENWOOD_6_N005', 'WOODSIDE_6_N004', 'BLLEHVN_6_N009']
+        node = nodes[3]
         try:
-            latest = Price.objects.earliest('start')
+            latest = Price.objects.filter(node=node).earliest('start')
             # end_time = make_aware(latest.end)
             end_time = latest.start
         except ObjectDoesNotExist as e:
@@ -25,7 +27,6 @@ class Command(BaseCommand):
         start_time = end_time - timedelta(days=30)
         end = end_time.strftime('%Y%m%dT%H:%M') + '-0000'
         start = start_time.strftime('%Y%m%dT%H:%M') + '-0000'
-        print start, end
 
         market_run_id = 'RTM'
         active_day = start
@@ -37,8 +38,10 @@ class Command(BaseCommand):
             + '&startdatetime=' + active_day \
             + '&enddatetime=' + end \
             + '&market_run_id=' + market_run_id \
-            + '&node=MENLO_6_N004' \
+            + '&node=' + node \
             + '&version=1'
+
+        print start, end, url
 
         file_name = '../%s.zip' % start
         urllib.urlretrieve(url, file_name)
