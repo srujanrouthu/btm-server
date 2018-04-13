@@ -21,7 +21,7 @@ class Command(BaseCommand):
             # end_time = make_aware(latest.end)
             end_time = latest.start
         except ObjectDoesNotExist as e:
-            print e.message
+            print(e.message)
             # end_time = make_aware(datetime(2018, 3, 21))
             end_time = datetime(2018, 3, 21)
         start_time = end_time - timedelta(days=30)
@@ -41,7 +41,7 @@ class Command(BaseCommand):
             + '&node=' + node \
             + '&version=1'
 
-        print start, end, url
+        print(start, end, url)
 
         file_name = '../%s.zip' % start
         urllib.urlretrieve(url, file_name)
