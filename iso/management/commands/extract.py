@@ -1,5 +1,5 @@
 import os
-import urllib
+from urllib.request import urlretrieve
 # import csv
 from xml.etree import ElementTree
 from zipfile import ZipFile
@@ -14,14 +14,14 @@ from iso.models import Price
 
 class Command(BaseCommand):
     def handle(self, *args, **options):
-        nodes = ['MENLO_6_N004', 'GLENWOOD_6_N005', 'WOODSIDE_6_N004', 'BLLEHVN_6_N009']
-        node = nodes[3]
+        nodes = ['MENLO_6_N004', 'GLENWOOD_6_N005', 'WOODSIDE_6_N004', 'BLLEHVN_6_N009', 'SARATOGA_2_N011']
+        node = nodes[4]
         try:
             latest = Price.objects.filter(node=node).earliest('start')
             # end_time = make_aware(latest.end)
             end_time = latest.start
         except ObjectDoesNotExist as e:
-            print(e.message)
+            print(e)
             # end_time = make_aware(datetime(2018, 3, 21))
             end_time = datetime(2018, 3, 21)
         start_time = end_time - timedelta(days=30)
@@ -44,7 +44,7 @@ class Command(BaseCommand):
         print(start, end, url)
 
         file_name = '../%s.zip' % start
-        urllib.urlretrieve(url, file_name)
+        urlretrieve(url, file_name)
         rows = []
         with ZipFile(file_name, 'r') as z:
             xml_name = z.namelist()[0]
@@ -72,7 +72,7 @@ class Command(BaseCommand):
         if len(rows) > 0:
             rows = list(filter(lambda d: d['DATA_DATA_ITEM'] == 'LMP_PRC', rows))
             keep = ['DATA_INTERVAL_START_GMT', 'DATA_INTERVAL_END_GMT', 'DATA_RESOURCE_NAME', 'DATA_VALUE']
-            rows = [{k: v for k, v in r.iteritems() if k in keep} for r in rows]
+            rows = [{k: v for k, v in r.items() if k in keep} for r in rows]
             prices = []
             for row in rows:
                 price = Price(
