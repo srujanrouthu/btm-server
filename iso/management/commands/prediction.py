@@ -30,7 +30,7 @@ def load_data(data, seq_len):
 
     result = np.array(result)
 
-    row = round(0.9 * result.shape[0])
+    row = round(1 * result.shape[0])
     train = result[:int(row), :]
     np.random.shuffle(train)
     x_train = train[:, :-1]
@@ -112,11 +112,11 @@ def plot_results(predicted_data, true_data):
 def plot_results_multiple(predicted_data, true_data, prediction_len):
     fig = plt.figure(facecolor='white')
     ax = fig.add_subplot(111)
-    ax.plot(true_data[-100:], label='True Data')
+    ax.plot(true_data, label='True Data')
     # Pad the list of predictions to shift it in the graph to it's correct start
     for i, data in enumerate(predicted_data):
         padding = [None for p in range(i * prediction_len)]
-        plt.plot(padding + data[-100:], label='Prediction')
+        plt.plot(padding + data, label='Prediction')
         plt.legend()
     plt.show()
 
@@ -129,7 +129,7 @@ class Command(BaseCommand):
         seq_len = 50
 
         nodes = ['MENLO_6_N004', 'GLENWOOD_6_N005', 'WOODSIDE_6_N004', 'BLLEHVN_6_N009', 'SARATOGA_2_N011']
-        start = make_aware(datetime(2016, 1, 1), pytz.timezone('America/Los_Angeles'))
+        start = make_aware(datetime(2016, 1, 1), pytz.timezone('America/Los_Angeles'))    # + timedelta(hours=10)
         end = make_aware(datetime(2018, 1, 1), pytz.timezone('America/Los_Angeles'))
         price_records = Price.objects.filter(start__gte=start, start__lt=end) \
             .order_by('start') \
@@ -137,13 +137,8 @@ class Command(BaseCommand):
         price_df = pd.DataFrame.from_records(price_records)
         price_df['start'] = price_df['start'].dt.tz_convert('US/Pacific').dt.tz_localize(None)
 
-        # price_df['day_of_week'] = price_df['start'].dt.weekday
-        # price_df['week_of_year'] = price_df['start'].dt.week
-        # price_df['time_of_day'] = price_df['start'].dt.time
-        # price_df['day_of_year'] = price_df['start'].dt.dayofyear
-
-        upper = price_df['price'].quantile(0.99)
-        lower = price_df['price'].quantile(0.01)
+        upper = price_df['price'].quantile(0.95)
+        lower = price_df['price'].quantile(0.05)
 
         price_df.loc[price_df['price'] > upper, 'price'] = upper
         price_df.loc[price_df['price'] < lower, 'price'] = lower
@@ -165,26 +160,13 @@ class Command(BaseCommand):
             nb_epoch=epochs,
             validation_split=0.05)
 
+        # model.save('prediction_model.h5')
+
         # predictions = predict_sequences_multiple(model, X_test, seq_len, 50)
+        predictions = predict_sequences_multiple(model, np.zeros((2880, 50, 1)), seq_len, 50)
         # predicted = predict_sequence_full(model, X_test, seq_len)
-        predicted = predict_point_by_point(model, X_test)
+        # predicted = predict_point_by_point(model, X_test)
 
         print('Training duration (s) : ', time.time() - global_start_time)
-        plot_results(predicted[0:200], y_test[0:200])
-        # plot_results_multiple(predictions, y_test, 50)
-
-        # price_df['time_of_day'] = pd.Categorical(price_df['time_of_day']).codes
-        # price_df['day_of_week'] = pd.Categorical(price_df['day_of_week']).codes
-        # price_df['week_of_year'] = pd.Categorical(price_df['week_of_year']).codes
-        # price_df['day_of_year'] = pd.Categorical(price_df['day_of_year']).codes
-
-        # X = price_df[['time_of_day', 'day_of_week', 'week_of_year', 'day_of_year']]
-        # y = price_df['change']
-        # X = sm.add_constant(X)
-
-        # print(X.describe())
-
-        # model = sm.OLS(y.astype(float), X, missing='drop').fit()
-        # price_df['prediction'] = model.predict(X)
-        #
-        # print(price_df[['start', 'node', 'change', 'prediction']].head(20))
+        # plot_results(predicted[0:200], y_test)
+        plot_results_multiple(predictions, y_test, 50)
