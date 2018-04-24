@@ -10,7 +10,7 @@ class Node(models.Model):
     latitude = models.FloatField(null=True, blank=True)
     longitude = models.FloatField(null=True, blank=True)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.node
 
     class Meta:
@@ -24,8 +24,8 @@ class Price(models.Model):
     price = models.FloatField(null=True, blank=True)
     prediction = models.FloatField(null=True, blank=True)
 
-    def __unicode__(self):
-        return '%s - %s - %s' % (self.start, self.node.__unicode__(), self.price)
+    def __str__(self):
+        return '%s - %s - %s' % (self.start, self.node.__str__(), self.price)
 
     class Meta:
         verbose_name_plural = 'Prices'

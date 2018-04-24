@@ -13,15 +13,21 @@ Including another URLconf
     1. Import the include() function: from django.conf.urls import url, include
     2. Add a URL to urlpatterns:  url(r'^blog/', include('blog.urls'))
 """
+from rest_framework_jwt.views import obtain_jwt_token, refresh_jwt_token, verify_jwt_token
+
 from django.conf.urls import url
 from django.contrib import admin
+from django.conf.urls import include
 
-
-from hubs.views import charging_pattern
+from hubs.views import charge, override
 
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
-    # url(r'^api-auth/', include('rest_framework.urls')),
-    url(r'^pattern/', charging_pattern),
+    url(r'^api-auth/', include('rest_framework.urls')),
+    url(r'^api-token-auth/', obtain_jwt_token),
+    url(r'^api-token-refresh/', refresh_jwt_token),
+    url(r'^api-token-verify/', verify_jwt_token),
+    url(r'^pattern/', charge),
+    url(r'^override/', override),
 ]
