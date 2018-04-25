@@ -19,10 +19,10 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         nodes = Node.objects.all()
 
-        for node in nodes[0:1]:
+        for node in nodes:
             empty_records = Price.objects.filter(node=node, price__isnull=True).order_by('start')
             start_time = empty_records[0].start
-            end_time = empty_records.reverse()[0].start
+            end_time = empty_records.reverse()[0].end
             # end_time = datetime(2018, 4, 24) - timedelta(days=30)
             # start_time = end_time - timedelta(days=30)
             start = start_time.strftime('%Y%m%dT%H:%M') + '-0000'

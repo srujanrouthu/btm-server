@@ -39,7 +39,7 @@ class Command(BaseCommand):
             # end_hour = datetime(end_raw.year, end_raw.month, end_raw.day)
             # end = make_aware(end_hour, pytz.timezone('America/Los_Angeles'))
             # start = make_aware(end_hour - timedelta(days=60), pytz.timezone('America/Los_Angeles'))
-            price_records = Price.objects.filter(start__gte=start, start__lt=end, node=node, price__isnull=False) \
+            price_records = Price.objects.filter(start__gte=start, start__lt=end, node=node) \
                 .order_by('start') \
                 .values('start', 'price')
             price_df = pd.DataFrame.from_records(price_records)
