@@ -1,6 +1,12 @@
+"""
+    Management function to predict prices using machine learning LSTM for next 24 hours.
+    Should be run every day after 00:00 GMT, after running extract.
+"""
+
+
 import pytz
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import time
 import warnings
@@ -14,7 +20,7 @@ import matplotlib.pyplot as plt
 from django.core.management.base import BaseCommand
 from django.utils.timezone import make_aware
 
-from iso.models import Price
+from iso.models import Price, Node
 
 pd.options.mode.use_inf_as_na = True
 
@@ -128,45 +134,62 @@ class Command(BaseCommand):
         epochs = 1
         seq_len = 50
 
-        nodes = ['MENLO_6_N004', 'GLENWOOD_6_N005', 'WOODSIDE_6_N004', 'BLLEHVN_6_N009', 'SARATOGA_2_N011']
-        start = make_aware(datetime(2016, 1, 1), pytz.timezone('America/Los_Angeles'))    # + timedelta(hours=10)
-        end = make_aware(datetime(2018, 1, 1), pytz.timezone('America/Los_Angeles'))
-        price_records = Price.objects.filter(start__gte=start, start__lt=end) \
-            .order_by('start') \
-            .values('start', 'node', 'price')
-        price_df = pd.DataFrame.from_records(price_records)
-        price_df['start'] = price_df['start'].dt.tz_convert('US/Pacific').dt.tz_localize(None)
+        nodes = Node.objects.all()
+        for node in nodes:
+            start = make_aware(datetime(2016, 1, 1), pytz.timezone('America/Los_Angeles'))    # + timedelta(hours=10)
+            end = make_aware(datetime(2018, 1, 1), pytz.timezone('America/Los_Angeles'))
+            price_records = Price.objects.filter(start__gte=start, start__lt=end, node=node) \
+                .order_by('start') \
+                .values('start', 'price')
+            price_df = pd.DataFrame.from_records(price_records)
+            price_df['start'] = price_df['start'].dt.tz_convert('US/Pacific').dt.tz_localize(None)
 
-        upper = price_df['price'].quantile(0.95)
-        lower = price_df['price'].quantile(0.05)
+            upper = price_df['price'].quantile(0.95)
+            lower = price_df['price'].quantile(0.05)
 
-        price_df.loc[price_df['price'] > upper, 'price'] = upper
-        price_df.loc[price_df['price'] < lower, 'price'] = lower
-        price_df.loc[price_df['price'] == 0, 'price'] = 0.01
-        price_df['price_normalized'] = price_df.groupby(['node'])['price'].transform(
-            lambda x: (x - list(x)[0]) / list(x)[0])
+            price_df.loc[price_df['price'] > upper, 'price'] = upper
+            price_df.loc[price_df['price'] < lower, 'price'] = lower
+            price_df.loc[price_df['price'] == 0, 'price'] = 0.01
+            price_df['price_normalized'] = (price_df['price'] / price_df['price'][0]) - 1
 
-        series = price_df[price_df['node'] == nodes[0]]['price_normalized']
-        X_train, y_train, X_test, y_test = load_data(list(series), seq_len)
+            X_train, y_train, X_test, y_test = load_data(list(price_df['price_normalized']), seq_len)
 
-        print('Data Loaded. Compiling...')
+            print('Data Loaded. Compiling...')
 
-        model = build_model([1, 50, 100, 1])
+            model = build_model([1, 50, 100, 1])
+            model.fit(X_train, y_train, batch_size=512, nb_epoch=epochs, validation_split=0.05)
 
-        model.fit(
-            X_train,
-            y_train,
-            batch_size=512,
-            nb_epoch=epochs,
-            validation_split=0.05)
+            new_start = price_records.reverse()[0]['start'] + timedelta(minutes=5)
+            starts = []
+            e = new_start + timedelta(days=1)
+            while new_start < e:
+                starts.append(new_start)
+                new_start += timedelta(minutes=5)
+            new_df = pd.DataFrame(data=None, columns=price_df.columns)
+            new_df['start'] = starts
+            new_df['norm_prediction'] = predict_sequence_full(model, np.zeros((len(starts), 50, 1)), seq_len)
+            new_df['prediction'] = (new_df['norm_prediction'] + 1) * price_df['price'][0]
 
-        # model.save('prediction_model.h5')
+            # model.save('prediction_model.h5')
 
-        # predictions = predict_sequences_multiple(model, X_test, seq_len, 50)
-        predictions = predict_sequences_multiple(model, np.zeros((2880, 50, 1)), seq_len, 50)
-        # predicted = predict_sequence_full(model, X_test, seq_len)
-        # predicted = predict_point_by_point(model, X_test)
+            # predictions = predict_sequences_multiple(model, X_test, seq_len, 50)
+            # predictions = predict_sequences_multiple(model, np.zeros((2880, 50, 1)), seq_len, 50)
+            # predicted = predict_sequence_full(model, X_test, seq_len)
+            # predicted = predict_point_by_point(model, X_test)
 
-        print('Training duration (s) : ', time.time() - global_start_time)
-        # plot_results(predicted[0:200], y_test)
-        plot_results_multiple(predictions, y_test, 50)
+            print('Training duration (s) : ', time.time() - global_start_time)
+            # plot_results(predicted[0:200], y_test)
+            # plot_results_multiple(predictions, y_test, 50)
+
+            new_df['start'] = new_df['start'].dt.tz_convert('GMT')
+
+            new_data = new_df.to_dict('records')
+            new_records = []
+            for d in new_data:
+                new_records.append(Price(
+                    start=d['start'],
+                    end=d['start'] + timedelta(minutes=5),
+                    node=node,
+                    prediction=d['prediction']
+                ))
+            Price.objects.bulk_create(new_records)

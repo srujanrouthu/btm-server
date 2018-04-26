@@ -1,5 +1,5 @@
 """
-    Management function to predict prices for next 24 hours.
+    Management function to predict prices using regression model for next 24 hours.
     Should be run every day after 00:00 GMT, after running extract.
 """
 

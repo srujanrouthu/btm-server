@@ -24,8 +24,9 @@ class Device(models.Model):
     hub = models.ForeignKey(to=Hub, related_name='devices')
     name = models.CharField(max_length=64, unique=True)
     type = models.CharField(max_length=64, null=True, blank=True)
-    at_default_idle_start = models.TimeField()
-    at_default_idle_end = models.TimeField()
+    at_default_idle_start = models.TimeField(null=False, blank=False)
+    at_default_idle_end = models.TimeField(null=False, blank=False)
+    in_range = models.BooleanField(null=False, blank=False, default=False)
 
     def __str__(self):
         return self.name

@@ -5,6 +5,7 @@
 
 
 import os
+import time
 from urllib.request import urlretrieve
 from xml.etree import ElementTree
 from zipfile import ZipFile
@@ -13,6 +14,11 @@ from zipfile import ZipFile
 from django.core.management.base import BaseCommand
 
 from iso.models import Price, Node
+
+
+# TODO: Following should come from config
+CAISO_API = 'http://oasis.caiso.com/oasisapi/SingleZip?'
+CAISO_XML_TAG = '{http://www.caiso.com/soa/OASISReport_v1.xsd}'
 
 
 class Command(BaseCommand):
@@ -30,9 +36,7 @@ class Command(BaseCommand):
 
             market_run_id = 'RTM'
 
-            base_url = "http://oasis.caiso.com/oasisapi/SingleZip?"
-
-            url = base_url \
+            url = CAISO_API \
                 + 'queryname=PRC_INTVL_LMP' \
                 + '&startdatetime=' + start \
                 + '&enddatetime=' + end \
@@ -56,9 +60,9 @@ class Command(BaseCommand):
                                 header = {}
                                 for head in item:
                                     row = {}
-                                    head_tag = head.tag.replace('{http://www.caiso.com/soa/OASISReport_v1.xsd}', '')
+                                    head_tag = head.tag.replace(CAISO_XML_TAG, '')
                                     for data in head:
-                                        data_tag = data.tag.replace('{http://www.caiso.com/soa/OASISReport_v1.xsd}', '')
+                                        data_tag = data.tag.replace(CAISO_XML_TAG, '')
                                         if head_tag == 'REPORT_HEADER':
                                             header['HEAD_%s' % data_tag] = data.text
                                         else:
@@ -83,3 +87,4 @@ class Command(BaseCommand):
                         price.price = value
                         price.save()
             os.remove(file_name)
+            time.sleep(1)

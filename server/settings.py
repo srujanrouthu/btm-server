@@ -100,6 +100,18 @@ DATABASES = {
     }
 }
 
+# For use in case I want to connect to production database from local for testing; also for running migrations
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql_psycopg2',
+#         'NAME': os.environ.get('DB_NAME', 'dcqkhj7mo8unqi'),
+#         'USER': os.environ.get('DB_USER', 'zjzmxypajwffmu'),
+#         'PASSWORD': os.environ.get('DB_PASSWORD', '2b0dfd06981acae4833a9f6c407084ed74cf28234e2f10c37634520d39552b81'),
+#         'HOST': os.environ.get('DB_HOST', 'ec2-174-129-41-64.compute-1.amazonaws.com'),
+#         'PORT': '5432',
+#     }
+# }
+
 
 # Password validation
 # https://docs.djangoproject.com/en/1.11/ref/settings/#auth-password-validators
