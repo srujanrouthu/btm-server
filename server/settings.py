@@ -42,7 +42,8 @@ DJANGO_APPS = [
 ]
 
 LIBRARY_APPS = [
-    'rest_framework'
+    'rest_framework',
+    'corsheaders',
 ]
 
 PROJECT_APPS = [
@@ -53,6 +54,7 @@ PROJECT_APPS = [
 INSTALLED_APPS = DJANGO_APPS + LIBRARY_APPS + PROJECT_APPS
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -159,3 +161,5 @@ REST_FRAMEWORK = {
 JWT_AUTH = {
     'JWT_EXPIRATION_DELTA': datetime.timedelta(days=365),
 }
+
+CORS_ORIGIN_ALLOW_ALL = True
