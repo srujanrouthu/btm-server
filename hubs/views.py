@@ -32,7 +32,7 @@ def charge(request):
     def inverse_charge(level):
         # TODO: Rough approximation; needs more research and regression
         # TODO: Machine learning can help battery charging patterns of a particular device
-        return 300 * ((level / 100) ** 2)
+        return 300 * ((float(level) / 100) ** 2)
 
     def time_required(level):
         max_level = 80  # TODO: Should come from user; should be able to override
@@ -70,6 +70,8 @@ def charge(request):
     price_records = node.prices.filter(start__gte=period_start, start__lt=period_end) \
         .order_by('start') \
         .values('start', 'end', 'prediction')
+    if len(price_records) == 0:
+        return Response({'charge': True})
     price_df = pd.DataFrame.from_records(price_records)
 
     price_df['is_charging_period'] = (price_df['start'] >= period_start) & (price_df['start'] < period_end)
