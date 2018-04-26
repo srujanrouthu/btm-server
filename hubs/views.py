@@ -93,7 +93,7 @@ def override(request):
     # TODO: Write check if device belongs to the person requesting
     # TODO: Write exception checks
 
-    device = Device.objects.get(id=request.body['device_id'])
-    o = Override.objects.create(device=device, at_required=request.body['at_requested'])
+    device = Device.objects.get(id=request.data['device_id'])
+    o = Override.objects.create(device=device, at_required=request.data['at_requested'])
 
-    return Response({'device': device.id, 'override': o.at_requested})
+    return Response({'device': device.id, 'override': o.at_required})
