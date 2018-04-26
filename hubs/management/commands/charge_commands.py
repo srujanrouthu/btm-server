@@ -15,7 +15,7 @@ from hubs.models import Device
 from iso.models import Node
 
 
-ENVIRONMENT = 'development'
+ENVIRONMENT = 'production'
 
 # TODO: Need to move to config file; to be done once code is hosted on EC2
 if ENVIRONMENT == 'production':
