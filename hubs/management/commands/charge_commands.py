@@ -56,6 +56,7 @@ class Command(BaseCommand):
             charge_state_response = requests.get(TESLA_API + 'charge_state')
             charge_state = charge_state_response.json()
             duration = time_required(charge_state['battery_level'])
+            no_charge_intervals = int(duration / 5)
 
             if not overrides:
                 if period_start.hour >= 12:
@@ -69,14 +70,15 @@ class Command(BaseCommand):
                 period_end = overrides.latest('at_required').at_required
 
             period_duration = (period_end - period_start).seconds / 60
+            no_intervals = int(period_duration / 5)
 
-            if period_duration < duration:
+            if no_intervals <= no_charge_intervals:
                 command = 'charge_start'
             else:
                 price_records = node.prices.filter(start__gte=period_start, start__lt=period_end) \
                     .order_by('start') \
                     .values('start', 'end', 'prediction')
-                if len(price_records) == 0:
+                if len(price_records) <= no_charge_intervals:
                     command = 'charge_start'
                 else:
                     price_df = pd.DataFrame.from_records(price_records)
@@ -85,9 +87,8 @@ class Command(BaseCommand):
                                 price_df['start'] < period_end)
                     price_df['price_rank'] = price_df.groupby(['is_charging_period'])['prediction'].rank(ascending=True)
 
-                    no_intervals = int(period_duration / 5)
                     price_df['is_ideal_charging'] = price_df['is_charging_period'] & (
-                                price_df['price_rank'] <= no_intervals)
+                                price_df['price_rank'] <= no_charge_intervals)
 
                     aware_now = period_start + timedelta(minutes=5)
                     sub_df = price_df.loc[(price_df['start'] <= aware_now) & (price_df['end'] > aware_now),]

@@ -19,7 +19,7 @@ from django.conf.urls import url
 from django.contrib import admin
 from django.conf.urls import include
 
-from hubs.views import override, update_range_state
+from hubs.views import override, update_range_state, charge_pattern
 
 
 urlpatterns = [
@@ -30,4 +30,5 @@ urlpatterns = [
     url(r'^api-token-verify/', verify_jwt_token),
     url(r'^override/', override),
     url(r'^device/', update_range_state),
+    url(r'^pattern/', charge_pattern),
 ]
