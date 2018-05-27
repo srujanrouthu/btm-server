@@ -111,10 +111,14 @@ def charge_pattern(request):
                     price_df['price_rank'] <= no_charge_intervals)
 
     aware_now = period_start + timedelta(minutes=5)
-    sub_df = price_df.loc[(price_df['start'] <= aware_now) | (price_df['end'] > aware_now), ]
-    sub_df['start'] = sub_df['start'].dt.tz_convert('US/Pacific')
-    sub_df['end'] = sub_df['end'].dt.tz_convert('US/Pacific')
 
-    sub_json = sub_df[['start', 'end', 'is_ideal_charging']].to_dict(orient='records')
+    if len(price_df.index) > 0:
+        sub_df = price_df.loc[(price_df['start'] <= aware_now) | (price_df['end'] > aware_now), ]
+        sub_df['start'] = sub_df['start'].dt.tz_convert('US/Pacific')
+        sub_df['end'] = sub_df['end'].dt.tz_convert('US/Pacific')
+
+        sub_json = sub_df[['start', 'end', 'is_ideal_charging']].to_dict(orient='records')
+    else:
+        sub_json = []
 
     return Response(sub_json)
