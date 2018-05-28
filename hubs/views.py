@@ -56,6 +56,9 @@ def charge_pattern(request):
         # TODO: Need to calculate closest node; before that fetch node locations
         return nodes[0]
 
+    def charge(time):
+        return 100 * ((float(time) / 300) ** 0.5)
+
     def inverse_charge(level):
         # TODO: Rough approximation; needs more research and regression
         # TODO: Machine learning can help battery charging patterns of a particular device
@@ -75,7 +78,8 @@ def charge_pattern(request):
     }
     node = closest_node(location)
 
-    duration = time_required(request.data['battery_level'])
+    battery_level = float(request.data['battery_level'])
+    duration = time_required(battery_level)
     no_charge_intervals = int(duration / 5)
 
     if not overrides:
@@ -90,7 +94,7 @@ def charge_pattern(request):
         period_end = overrides.latest('at_required').at_required
 
     period_duration = (period_end - period_start).seconds / 60
-    no_intervals = int(period_duration / 5)\
+    no_intervals = int(period_duration / 5)
 
     price_records = node.prices.filter(start__gte=period_start, start__lt=period_end) \
         .order_by('start') \
@@ -98,6 +102,7 @@ def charge_pattern(request):
     price_df = pd.DataFrame.from_records(price_records)
 
     if no_intervals <= no_charge_intervals:
+        print(no_intervals, no_charge_intervals)
         price_df['is_ideal_charging'] = True
     else:
         if len(price_records) <= no_charge_intervals:
@@ -115,9 +120,22 @@ def charge_pattern(request):
     if len(price_df.index) > 0:
         sub_df = price_df.loc[(price_df['start'] <= aware_now) | (price_df['end'] > aware_now), ]
         sub_df['start'] = sub_df['start'].dt.tz_convert('US/Pacific')
-        sub_df['end'] = sub_df['end'].dt.tz_convert('US/Pacific')
+        sub_df['time'] = sub_df['start'].dt.time
 
-        sub_json = sub_df[['start', 'end', 'is_ideal_charging']].to_dict(orient='records')
+        sub_df['level'] = None
+        sub_df['level'][0] = battery_level
+        for i in range(1, len(sub_df.index)):
+            old_level = sub_df['level'][i - 1]
+            if sub_df['level'][i - 1] >= 80:
+                sub_df['is_ideal_charging'][i] = False
+            if sub_df['is_ideal_charging'][i]:
+                old_time = inverse_charge(old_level)
+                new_time = old_time + 5
+                sub_df['level'][i] = min(charge(new_time), 80)
+            else:
+                sub_df['level'][i] = old_level
+
+        sub_json = sub_df[['time', 'prediction', 'level', 'is_ideal_charging']].to_dict(orient='records')
     else:
         sub_json = []
 
